@@ -1,0 +1,97 @@
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(janitor)
+library(tictoc)
+#library(log4r)
+library(boxr)
+library(here)
+library(furrr)
+plan(multisession)
+
+# setwd
+
+# authenticate box app
+box_auth(client_id = " ", client_secret = " ")
+
+# set file path where log information will go
+log_file <- here(" ")
+file.create("log_file")
+
+# append log_file created to include following parameters
+  # previously used logger to compare to previous files for continous updates, took out functionality
+    # no longer needed
+
+#logger <- logger(
+#  appenders = list(
+#    file_appender("log_file", append = T, layout = " "()),
+#    console_appender(layout = ""())
+#  )
+#)
+
+# download extract from box
+box_dl(
+  "ID",
+  local_dir = "",
+  overwrite = FALSE,
+  file_name = NULL,
+  version_id = NULL,
+  version_no = NULL
+)
+
+# grab data from folder containing extract
+box_input_files_list <- as_tibble(box_ls(" ")) %>% 
+  select(file = name, id) %>% 
+  mutate(type = str_extract(file, "[:alpha:]+(?Comp)"),
+         legacy = str_extract(file, "[[:alpha:]\\s]+(?=_Current)"),
+         name = str_replace_all(file, c(" "))) %>% 
+  as.list() %>% 
+  transpose() %>% 
+  set_names(., map_chr(., pluck,"name"))
+
+# performs all actions needed to parse, customizeable 
+  # used as 'if statement' to handle multiple conditions
+generate_from_input_files = function(file,
+                                     leg_type = c (" "),
+                                     test = T,
+                                     box = F){
+  if(box){
+    ideas = list()
+    cheat_sheet()
+    raw_specs = 
+    
+    walk(leg_types,
+         ~compare_and_update(input_file = file,
+                             box = T,
+                             type = .,
+                             cleaned_extract = (),
+                             testing = testing,
+                             column_names = original_cols,
+                             specs))
+  } else {
+    ideas = list ()
+    cheat_sheet()
+    raw_specs = 
+    
+    future_walk(leg_types,
+                ~compare_and_update(input_file = file,
+                                    box = T,
+                                    type = .,
+                                    cleaned_extract = (),
+                                    testing = testing,
+                                    column_names = original_cols,
+                                    specs))
+  }
+}
+    
+
+# parse extract
+tic("Legends processing:")
+walk(box_input_files_list, 
+     generate_from_input_files,
+     testing = F,
+     box = T)
+toc()
+
+# delete file(s) from extract folder
+# box_delete_file()
